@@ -3,3 +3,5 @@ original_model.pkl
 __pycache__/
 *.pyc
 .vibe/
+node_modules/
+dist/

@@ -16,25 +16,30 @@ import PageHeader from '../components/common/PageHeader'
 import StatusBadge from '../components/common/StatusBadge'
 import { useDashboard } from '../context/DashboardContext'
 import { MODEL_COEFFICIENT_NAMES } from '../data/forgetGraphData'
+import { buildModelData } from '../modelData'
 
 export default function VerificationCenterPage() {
-  const { modelData, deletions, tombstones } = useDashboard()
+  const { verification, stats, tombstones } = useDashboard()
+  const modelData = buildModelData(verification, stats)
   const [toleranceExponent, setToleranceExponent] = useState(5) // 10^-5
   const [selectedUserAudit, setSelectedUserAudit] = useState(42)
+  const auditOptions = tombstones.length ? tombstones.map((t) => t.userId) : [42, 118, 87, 193]
   const [isAuditing, setIsAuditing] = useState(false)
   const [auditSuccessMsg, setAuditSuccessMsg] = useState(null)
 
-  const currentTolerance = Math.pow(10, -toleranceExponent)
-  const isUser87 = Number(selectedUserAudit) === 87
+  if (!modelData) return (
+    <div className="text-xs font-mono text-slate-400">Loading verification data from API...</div>
+  )
 
-  // Simulated discrepancies for selected user
-  const deltas = {
-    age_norm: isUser87 ? 0.000312 : 0.000001,
-    balance_log: isUser87 ? 0.048210 : 0.000002,
-    tx_per_tenure: isUser87 ? 0.000104 : 0.000001,
-    balance_per_tx: isUser87 ? 0.000045 : 0.000000,
-    intercept: isUser87 ? 0.000215 : 0.000001,
-  }
+  const currentTolerance = Math.pow(10, -toleranceExponent)
+
+  // Live per-parameter gaps between replacement (current) and original model,
+  // plus the backend verification verdict. Real numbers from GET /verification.
+  const repCoef = modelData ? modelData.replacementModel.coefficients : {}
+  const origCoef = modelData ? modelData.originalModel.coefficients : {}
+  const deltas = Object.fromEntries(
+    MODEL_COEFFICIENT_NAMES.map((k) => [k, Math.abs((repCoef[k] ?? 0) - (origCoef[k] ?? 0))])
+  )
 
   const maxGap = Math.max(...Object.values(deltas))
   const passed = maxGap <= currentTolerance
@@ -139,10 +144,9 @@ export default function VerificationCenterPage() {
                   onChange={(e) => setSelectedUserAudit(Number(e.target.value))}
                   className="bg-[#080C14] border border-[#1A2744] text-xs font-mono font-bold text-emerald-400 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500"
                 >
-                  <option value={42}>Audit USR-0042 (Clean Deletion)</option>
-                  <option value={118}>Audit USR-0118 (Clean Deletion)</option>
-                  <option value={87}>Audit USR-0087 (Residual Failure)</option>
-                  <option value={193}>Audit USR-0193 (Clean Deletion)</option>
+                  {auditOptions.map((uid) => (
+                    <option key={uid} value={uid}>Audit USR-{String(uid).padStart(4, '0')}</option>
+                  ))}
                 </select>
 
                 <button

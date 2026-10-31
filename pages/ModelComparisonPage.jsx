@@ -16,9 +16,14 @@ import PageHeader from '../components/common/PageHeader'
 import StatusBadge from '../components/common/StatusBadge'
 import { useDashboard } from '../context/DashboardContext'
 import { MODEL_COEFFICIENT_NAMES } from '../data/forgetGraphData'
+import { buildModelData } from '../modelData'
 
 export default function ModelComparisonPage() {
-  const { modelData } = useDashboard()
+  const { verification, stats } = useDashboard()
+  const modelData = buildModelData(verification, stats)
+  if (!modelData) return (
+    <div className="text-xs font-mono text-slate-400">Loading model verification from API...</div>
+  )
   const { originalModel, replacementModel, referenceModel, tolerance, maxGap, verdict } = modelData
   const [showRawJson, setShowRawJson] = useState(false)
 
@@ -66,7 +71,7 @@ export default function ModelComparisonPage() {
           </div>
           <div className="mt-4 pt-3 border-t border-[#16233B] flex items-center justify-between text-xs font-mono">
             <span className="text-slate-400">R² Quality:</span>
-            <span className="text-white font-bold">{originalModel.r2Score}</span>
+            <span className="text-white font-bold">{originalModel.r2Score ?? '—'}</span>
             <StatusBadge variant="neutral" size="sm">
               Archived Baseline
             </StatusBadge>
@@ -87,7 +92,7 @@ export default function ModelComparisonPage() {
           </div>
           <div className="mt-4 pt-3 border-t border-[#16233B] flex items-center justify-between text-xs font-mono">
             <span className="text-slate-400">R² Quality:</span>
-            <span className="text-emerald-400 font-bold">{replacementModel.r2Score}</span>
+            <span className="text-emerald-400 font-bold">{replacementModel.r2Score ?? '—'}</span>
             <StatusBadge variant="emerald" size="sm">
               Serving Active
             </StatusBadge>
@@ -108,7 +113,7 @@ export default function ModelComparisonPage() {
           </div>
           <div className="mt-4 pt-3 border-t border-[#16233B] flex items-center justify-between text-xs font-mono">
             <span className="text-slate-400">R² Quality:</span>
-            <span className="text-cyan-400 font-bold">{referenceModel.r2Score}</span>
+            <span className="text-cyan-400 font-bold">{referenceModel.r2Score ?? '—'}</span>
             <StatusBadge variant="cyan" size="sm">
               Ground Truth
             </StatusBadge>

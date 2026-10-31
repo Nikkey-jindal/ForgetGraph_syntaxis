@@ -91,7 +91,7 @@ export default function Navbar() {
             <span className="text-slate-200">Dual-Train Grid:</span>
             <span className="text-emerald-400 font-bold">ONLINE</span>
             <span className="text-slate-400">|</span>
-            <span className="text-slate-400">{stats.activeUsers}/200 Users</span>
+            <span className="text-slate-400">{stats.active_users ?? stats.activeUsers}/{stats.total_users_seeded ?? 200} Users</span>
           </div>
 
           {/* Audit Alert Notice */}

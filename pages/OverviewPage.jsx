@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDashboard } from '../context/DashboardContext'
+import { buildModelData } from '../modelData'
 import PageHeader from '../components/common/PageHeader'
 import StatCards from '../components/dashboard/StatCards'
 import SystemHealth from '../components/dashboard/SystemHealth'
@@ -13,9 +14,9 @@ import { ShieldCheck, RefreshCw, Database, Cpu, ArrowRight, UserMinus } from 'lu
 export default function OverviewPage() {
   const {
     stats,
-    systems,
     deletions,
-    modelData,
+    verification,
+    apiError,
     stages,
     setDeleteModalOpen,
     setLineageModalOpen,
@@ -23,6 +24,16 @@ export default function OverviewPage() {
     setSelectedDeletionDetail,
     refreshDiagnostics,
   } = useDashboard()
+
+  const systems = [
+    { id: 'raw-db', name: 'Raw Database', entity: 'users table (SQLite)', status: 'Live', badgeVariant: 'emerald', latency: '—', records: `${stats.active_users ?? 0} rows`, details: 'Live count from GET /stats.', lastChecked: 'Just now' },
+    { id: 'feature-store', name: 'Feature Store', entity: 'Derived feature matrix', status: 'Synchronized', badgeVariant: 'emerald', latency: '—', records: `${stats.feature_rows ?? 0} feature vectors`, details: '4 features: age_norm, balance_log, tx_per_tenure, balance_per_tx.', lastChecked: 'Just now' },
+    { id: 'prediction-cache', name: 'Prediction Cache', entity: 'predictions table', status: 'Active', badgeVariant: 'cyan', latency: '—', records: `${stats.cached_predictions ?? 0} cached inferences`, details: 'Populated by train_original.py; purged per-user on deletion.', lastChecked: 'Just now' },
+    { id: 'ml-model', name: 'ML Model', entity: `Ridge Regressor (L2, α=${stats.model?.ridge_alpha ?? 1.0})`, status: 'Serving Active', badgeVariant: 'emerald', latency: '—', records: '5 parameters (4 coef + 1 int)', details: 'Ridge(alpha=1.0, random_state=42), retrained on deletion.', lastChecked: 'Just now' },
+    { id: 'verification-engine', name: 'Verification Engine', entity: 'Dual-Train Auditor', status: 'Audit Ready', badgeVariant: 'cyan', latency: '—', records: `${(stats.verification_passed ?? 0) + (stats.verification_failed ?? 0)} runs`, details: 'Independent reference model per deletion (verify.py).', lastChecked: 'Just now' },
+  ]
+
+  const modelData = buildModelData(verification, stats)
 
   const [activeStatFilter, setActiveStatFilter] = useState(null)
 
@@ -100,10 +111,16 @@ export default function OverviewPage() {
         </section>
 
         <section className="h-full" aria-label="Tri-Model Status Comparison">
-          <ModelStatus
-            modelData={modelData}
-            onOpenVerificationModal={() => setVerificationModalOpen(true)}
-          />
+          {modelData ? (
+            <ModelStatus
+              modelData={modelData}
+              onOpenVerificationModal={() => setVerificationModalOpen(true)}
+            />
+          ) : (
+            <div className="rounded-xl bg-[#0E1626] border border-[#1A2744] p-5 sm:p-6 shadow-sm h-full flex items-center justify-center text-xs font-mono text-slate-400">
+              {apiError ? `API unreachable: ${apiError}` : 'Loading model verification from API...'}
+            </div>
+          )}
         </section>
       </div>
 

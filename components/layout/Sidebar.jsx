@@ -51,7 +51,7 @@ export default function Sidebar() {
       name: 'Delete User',
       path: '/delete-user',
       icon: UserMinus,
-      badge: `${stats.activeUsers} Active`,
+      badge: `${stats.active_users ?? stats.activeUsers} Active`,
       badgeVariant: 'emerald',
       description: '6-stage atomic unlearning runner',
     },
@@ -234,7 +234,7 @@ export default function Sidebar() {
             </div>
             <div>
               <span className="text-slate-400 block text-[9px]">LATENCY</span>
-              <span className="text-emerald-400 font-semibold">{stats.systemLatency || '2.4 ms'}</span>
+              <span className="text-emerald-400 font-semibold">{stats.active_users ?? stats.activeUsers} active users</span>
             </div>
           </div>
 

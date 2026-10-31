@@ -43,9 +43,9 @@ export default function AuditLogsPage() {
     setTestUid(5000)
   }
 
-  const handleRunReingestTest = (e) => {
+  const handleRunReingestTest = async (e) => {
     e.preventDefault()
-    const outcome = testReingestion({
+    const outcome = await testReingestion({
       id: testUid,
       age: testAge,
       account_balance: testBalance,

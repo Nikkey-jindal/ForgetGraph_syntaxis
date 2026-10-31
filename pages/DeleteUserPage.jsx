@@ -21,7 +21,6 @@ export default function DeleteUserPage() {
   const {
     stats,
     tombstones,
-    activeUsersList,
     stages,
     executeDeletion,
   } = useDashboard()
@@ -32,19 +31,15 @@ export default function DeleteUserPage() {
   const [currentStepIndex, setCurrentStepIndex] = useState(-1)
   const [lastActionResult, setLastActionResult] = useState(null)
 
-  // Find target user details if active
-  const targetUser = activeUsersList.find((u) => u.id === Number(targetUserId))
   const isAlreadyTombstoned = tombstones.some((t) => t.userId === Number(targetUserId))
 
-  // Find lowest remaining active ID
   const handlePickLowest = () => {
-    const lowest = activeUsersList.find((u) => u.status === 'Active')
-    if (lowest) {
-      setTargetUserId(lowest.id)
-    }
+    const next = Number(targetUserId) + 1
+    setTargetUserId(next)
   }
 
-  // Trigger simulated 6-step deletion pipeline
+  // Run the REAL backend 6-step deletion pipeline via POST /delete,
+  // animating the timeline while the request executes.
   const handleTriggerDeletion = async () => {
     if (isExecuting) return
 
@@ -52,13 +47,13 @@ export default function DeleteUserPage() {
     setCurrentStepIndex(0)
     setLastActionResult(null)
 
-    // Simulate animated sequential step-through
+    const request = executeDeletion(targetUserId)
     for (let i = 0; i < stages.length; i++) {
       setCurrentStepIndex(i)
-      await new Promise((resolve) => setTimeout(resolve, 350))
+      await new Promise((resolve) => setTimeout(resolve, 300))
     }
 
-    const result = executeDeletion(targetUserId, reason)
+    const result = await request
     setLastActionResult(result)
     setIsExecuting(false)
     setCurrentStepIndex(stages.length)
@@ -120,7 +115,7 @@ export default function DeleteUserPage() {
                   </button>
                 </div>
                 <p className="text-[11px] text-slate-400 font-mono mt-1">
-                  Demo users span IDs 1 to 200. Tip: try User 87 to see audit residue catch!
+                  IDs 1-200 exist in the seeded DB. Deleting a tombstoned ID returns already_deleted.
                 </p>
               </div>
 
@@ -154,7 +149,7 @@ export default function DeleteUserPage() {
               </div>
 
               {/* Customer Record Preview */}
-              {targetUser && (
+              {false && (
                 <div className="p-3.5 rounded-lg bg-[#080C14] border border-[#1A2744] text-xs font-mono space-y-2">
                   <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
                     Customer Database Snapshot:
@@ -193,7 +188,7 @@ export default function DeleteUserPage() {
               </button>
 
               <div className="text-[11px] font-mono text-slate-400 text-center">
-                Remaining Active Records: <span className="text-emerald-400 font-bold">{stats.activeUsers}</span> of {stats.totalUsers}
+                Remaining Active Records: <span className="text-emerald-400 font-bold">{stats.active_users}</span> of {stats.total_users_seeded}
               </div>
             </div>
           </div>
@@ -214,32 +209,58 @@ export default function DeleteUserPage() {
 
               {lastActionResult && (
                 <StatusBadge
-                  variant={lastActionResult.isPassed ? 'emerald' : 'rose'}
+                  variant={
+                    lastActionResult.status === 'already_deleted'
+                      ? 'amber'
+                      : lastActionResult.isPassed
+                      ? 'emerald'
+                      : 'rose'
+                  }
                   size="sm"
                   dot
                 >
-                  {lastActionResult.isPassed ? 'Verified PASS' : 'VERIFICATION FAILED'}
+                  {lastActionResult.status === 'already_deleted'
+                    ? 'ALREADY DELETED'
+                    : lastActionResult.isPassed
+                    ? 'Verified PASS'
+                    : 'VERIFICATION FAILED'}
                 </StatusBadge>
               )}
             </div>
 
             {/* Verdict Banner if completed */}
             {lastActionResult && (
-              <div className={`p-4 rounded-xl border mb-5 font-mono text-xs ${
-                lastActionResult.isPassed
-                  ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
-                  : 'bg-rose-950/30 border-rose-500/40 text-rose-300'
-              }`}>
-                <div className="flex items-center justify-between font-bold text-sm mb-1">
-                  <span>{lastActionResult.isPassed ? '✓ Deletion Certified & Verified' : '✕ Model Verification Divergence'}</span>
-                  <span>ΔW = {lastActionResult.maxDelta}</span>
+              lastActionResult.status === 'already_deleted' ? (
+                <div className="p-4 rounded-xl border mb-5 font-mono text-xs bg-amber-950/30 border-amber-500/40 text-amber-300">
+                  <div className="font-bold text-sm mb-1">⚠ Already Deleted</div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    User {targetUserId} is already tombstoned in the database. The backend returned
+                    <span className="font-bold"> already_deleted</span> — the deletion pipeline is idempotent and no new steps were logged.
+                  </p>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {lastActionResult.isPassed
-                    ? `User ${targetUserId} was removed from the users table, derived features recomputed, cache purged, replacement model refit, and verified to match reference model within tolerance τ = 10⁻⁵.`
-                    : `User ${targetUserId} was removed, but the replacement model diverged from ground-truth reference by ΔW = ${lastActionResult.maxDelta}. Residue detected in balance_log weight!`}
-                </p>
-              </div>
+              ) : lastActionResult.status === 'user_not_found' ? (
+                <div className="p-4 rounded-xl border mb-5 font-mono text-xs bg-rose-950/30 border-rose-500/40 text-rose-300">
+                  <div className="font-bold text-sm mb-1">✕ User Not Found</div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    User {targetUserId} does not exist in the users table.
+                  </p>
+                </div>
+              ) : (
+                <div className={`p-4 rounded-xl border mb-5 font-mono text-xs ${
+                  lastActionResult.isPassed
+                    ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                    : 'bg-rose-950/30 border-rose-500/40 text-rose-300'
+                }`}>
+                  <div className="flex items-center justify-between font-bold text-sm mb-1">
+                    <span>{lastActionResult.isPassed ? '✓ Deletion Certified & Verified (PASS)' : '✕ Model Verification Divergence'}</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {lastActionResult.isPassed
+                      ? `User ${targetUserId} was removed from the users table, features recomputed, cache invalidated, replacement Ridge model retrained, and independent verification PASSED (coefficients + intercept match the reference model).`
+                      : `User ${targetUserId} was removed, but verification reported FAIL.`}
+                  </p>
+                </div>
+              )
             )}
 
             {/* Stepper Timeline */}

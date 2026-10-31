@@ -51,7 +51,7 @@ export default function ModelStatus({ modelData, onOpenVerificationModal }) {
               Baseline Ridge
             </div>
             <div className="text-[11px] text-slate-400">
-              Trained on full D (200 rows)
+              {originalModel.trainedOn}
             </div>
             <div className="mt-2 text-[10px] font-mono text-slate-400 bg-[#0E1626] px-2 py-0.5 rounded border border-[#1A2744]">
               Archived Baseline
@@ -68,7 +68,7 @@ export default function ModelStatus({ modelData, onOpenVerificationModal }) {
               Pipeline Retrained
             </div>
             <div className="text-[11px] text-emerald-300/80">
-              Fitted on D \ {'{u}'} (196 rows)
+              {replacementModel.trainedOn}
             </div>
             <div className="mt-2 text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/40">
               Active Serving
